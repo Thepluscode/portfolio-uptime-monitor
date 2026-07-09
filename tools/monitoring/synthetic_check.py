@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -55,11 +56,18 @@ def probe(url: str, timeout: float) -> dict:
         return {"status": 0, "latency_ms": (time.monotonic() - start) * 1000, "body": "", "error": str(e)}
 
 
-def send_alert(webhook: str, region: str, failures: list[dict]) -> None:
+def _alert_payload(webhook: str, text: str, chat_id: str | None) -> bytes:
+    """Telegram Bot API needs {chat_id, text}; Slack/Discord/generic take {text}. Unit-tested."""
+    if "api.telegram.org" in webhook:
+        return json.dumps({"chat_id": chat_id, "text": text}).encode()
+    return json.dumps({"text": text}).encode()
+
+
+def send_alert(webhook: str, region: str, failures: list[dict], chat_id: str | None = None) -> None:
     lines = [f"🔴 Synthetic check FAILED (region={region})"]
     for f in failures:
         lines.append(f"• {f['url']} — {'; '.join(f['reasons'])}")
-    payload = json.dumps({"text": "\n".join(lines)}).encode()
+    payload = _alert_payload(webhook, "\n".join(lines), chat_id)
     try:
         req = urllib.request.Request(webhook, data=payload, method="POST",
                                      headers={"Content-Type": "application/json"})
@@ -68,7 +76,7 @@ def send_alert(webhook: str, region: str, failures: list[dict]) -> None:
         print(f"WARN: alert webhook failed: {e}", file=sys.stderr)
 
 
-def run(urls, cfg, region, webhook, timeout) -> int:
+def run(urls, cfg, region, webhook, timeout, chat_id=None) -> int:
     failures = []
     for url in urls:
         ok, reasons = classify(probe(url, timeout), cfg)
@@ -77,7 +85,7 @@ def run(urls, cfg, region, webhook, timeout) -> int:
         if not ok:
             failures.append({"url": url, "reasons": reasons})
     if failures and webhook:
-        send_alert(webhook, region, failures)
+        send_alert(webhook, region, failures, chat_id)
     print(f"{len(urls) - len(failures)}/{len(urls)} healthy (region={region})")
     return 1 if failures else 0
 
@@ -94,6 +102,9 @@ def selftest() -> int:
     ok, reasons = classify({"status": 503, "latency_ms": 5000, "body": "", "error": None},
                            {"expect_status": 200, "max_latency_ms": 2000})
     assert not ok and len(reasons) == 2, reasons  # both status and latency cited
+    # alert payload shaping: Telegram Bot API vs Slack/generic
+    assert json.loads(_alert_payload("https://hooks.slack.com/x", "hi", None)) == {"text": "hi"}
+    assert json.loads(_alert_payload("https://api.telegram.org/bot1/sendMessage", "hi", "42")) == {"chat_id": "42", "text": "hi"}
     print("synthetic_check.py selftest: OK")
     return 0
 
@@ -106,7 +117,9 @@ def main(argv=None) -> int:
     p.add_argument("--expect-body", help="substring that must appear in the body")
     p.add_argument("--timeout", type=float, default=10.0, help="per-request timeout (s)")
     p.add_argument("--region", default="local", help="vantage-point label for the alert")
-    p.add_argument("--alert-webhook", help="Slack-shaped webhook to POST on failure")
+    p.add_argument("--alert-webhook", help="Slack-shaped webhook, or a Telegram Bot API sendMessage URL, to POST on failure")
+    p.add_argument("--telegram-chat-id", default=os.environ.get("TELEGRAM_CHAT_ID"),
+                   help="chat id for a Telegram --alert-webhook (default: TELEGRAM_CHAT_ID env)")
     p.add_argument("--selftest", action="store_true")
     args = p.parse_args(argv)
     if args.selftest:
@@ -115,7 +128,7 @@ def main(argv=None) -> int:
         p.error("at least one --url is required")
     cfg = {"expect_status": args.expect_status, "max_latency_ms": args.max_latency_ms,
            "expect_body": args.expect_body}
-    return run(args.url, cfg, args.region, args.alert_webhook, args.timeout)
+    return run(args.url, cfg, args.region, args.alert_webhook, args.timeout, args.telegram_chat_id)
 
 
 if __name__ == "__main__":

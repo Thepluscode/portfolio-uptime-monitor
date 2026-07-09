@@ -26,7 +26,8 @@ jobs:
       - name: outside-in probe of all private services
         env:
           MONITOR_TARGETS: ${{ secrets.MONITOR_TARGETS }}
-          ALERT_WEBHOOK: ${{ secrets.ALERT_WEBHOOK }}
+          ALERT_WEBHOOK: ${{ secrets.ALERT_WEBHOOK }}          # Telegram Bot API sendMessage URL (or Slack/generic)
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}    # required when ALERT_WEBHOOK is a Telegram URL
         shell: bash
         run: |
           set -euo pipefail
@@ -37,5 +38,6 @@ jobs:
             --expect-status 200 \
             --max-latency-ms 3000 \
             --region "gh-ext" \
-            --alert-webhook "$ALERT_WEBHOOK"
+            --alert-webhook "$ALERT_WEBHOOK" \
+            --telegram-chat-id "$TELEGRAM_CHAT_ID"
         # exit 1 if ANY target is down → job fails + webhook already fired.
