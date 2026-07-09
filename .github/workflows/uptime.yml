@@ -1,0 +1,41 @@
+# Portfolio uptime monitor — ONE free outside-in probe covering every PRIVATE service.
+#
+# Why this repo is public: GitHub Actions minutes are UNLIMITED and free on public repos, so the
+# scheduled probe costs nothing — unlike a scheduled workflow inside each private repo, which burns
+# billable minutes. The probed URLs live in the MONITOR_TARGETS secret, so no private domain is
+# committed here. This is a genuine external vantage point (GitHub US runners), so it satisfies Q1.
+#
+# Setup (repo Settings → Secrets and variables → Actions → Secrets):
+#   MONITOR_TARGETS = space/newline-separated health URLs, e.g.
+#                     "https://cp.example.com/health https://bughawk.example.com/healthz ..."
+#   ALERT_WEBHOOK   = Slack/PagerDuty inbound webhook (fires on any target down)
+
+name: uptime
+on:
+  schedule:
+    - cron: "*/5 * * * *"     # every 5 min (GitHub minimum)
+  workflow_dispatch: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.x" }
+      - name: outside-in probe of all private services
+        env:
+          MONITOR_TARGETS: ${{ secrets.MONITOR_TARGETS }}
+          ALERT_WEBHOOK: ${{ secrets.ALERT_WEBHOOK }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          for u in $MONITOR_TARGETS; do args+=(--url "$u"); done
+          if [ ${#args[@]} -eq 0 ]; then echo "MONITOR_TARGETS is empty — set it in repo secrets"; exit 1; fi
+          python3 tools/monitoring/synthetic_check.py "${args[@]}" \
+            --expect-status 200 \
+            --max-latency-ms 3000 \
+            --region "gh-ext" \
+            --alert-webhook "$ALERT_WEBHOOK"
+        # exit 1 if ANY target is down → job fails + webhook already fired.
