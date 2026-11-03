@@ -1,0 +1,24 @@
+{
+  "requirement": "Scheduled uptime probe of portfolio sites (GitHub Actions)",
+  "changed": [
+    "tools/"
+  ],
+  "checks": {
+    "lint": null,
+    "unit": null,
+    "integration": null,
+    "concurrency": null,
+    "invariant": null,
+    "failure_injection": null,
+    "recovery": null,
+    "audit_evidence": null,
+    "observability": null
+  },
+  "not_applicable": {
+    "lint": "no Python in tools/; the workflow is the only executable"
+  },
+  "proposed_from": [
+    "hand-written from CI workflow / CLAUDE.md / build files, 2026-11-03"
+  ],
+  "standard": "theplus-tech-knowledge/doctrine/RELEASE_GATE.md; run with tools/release_evidence.py"
+}
