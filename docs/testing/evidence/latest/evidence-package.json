@@ -1,0 +1,15 @@
+{
+  "repo": "/Users/theophilusogieva/projects/_remote-only/portfolio-uptime-monitor-adopt",
+  "sha": "509acf9143c8d7377461edc78a9375e78ab64030",
+  "branch": "adopt/verified-engineering",
+  "dirty": false,
+  "generated_at": "2026-11-03T08:57:52+00:00",
+  "requirement": "Scheduled uptime probe of portfolio sites (GitHub Actions)",
+  "changed": [
+    "tools/"
+  ],
+  "evidence": {
+    "lint": "not_applicable: no Python in tools/; the workflow is the only executable"
+  },
+  "runs": []
+}

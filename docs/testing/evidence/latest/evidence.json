@@ -1,0 +1,3 @@
+{
+  "lint": "not_applicable: no Python in tools/; the workflow is the only executable"
+}
