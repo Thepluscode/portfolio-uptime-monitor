@@ -15,7 +15,9 @@
     "observability": null
   },
   "not_applicable": {
-    "lint": "no Python in tools/; the workflow is the only executable"
+    "lint": "no Python in tools/; the workflow is the only executable",
+    "unit": "a single GitHub Actions workflow; nothing executes locally",
+    "integration": "same \u2014 the workflow is the integration and runs only in Actions"
   },
   "proposed_from": [
     "hand-written from CI workflow / CLAUDE.md / build files, 2026-11-03"
