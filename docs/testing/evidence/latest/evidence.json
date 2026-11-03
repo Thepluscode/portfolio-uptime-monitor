@@ -1,3 +1,5 @@
 {
-  "lint": "not_applicable: no Python in tools/; the workflow is the only executable"
+  "lint": "not_applicable: no Python in tools/; the workflow is the only executable",
+  "unit": "not_applicable: a single GitHub Actions workflow; nothing executes locally",
+  "integration": "not_applicable: same \u2014 the workflow is the integration and runs only in Actions"
 }
